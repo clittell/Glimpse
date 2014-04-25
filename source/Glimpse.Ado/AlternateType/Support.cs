@@ -63,20 +63,25 @@ namespace Glimpse.Ado.AlternateType
             return registrations is DataSet ? ((DataSet)registrations).Tables["DbProviderFactories"] : (DataTable)registrations;
         }
 
-        public static object GetParameterValue(IDataParameter parameter)
+        public static object TranslateValue(object value)
         {
-            if (parameter.Value == DBNull.Value)
+            if (value == DBNull.Value)
             {
                 return "NULL";
             }
 
-            if (parameter.Value is byte[])
+            byte[] blob = value as byte[];
+            if (blob != null)
             {
-                var blob = parameter.Value as byte[];
-                return "BLOB" + (blob != null ? string.Format(" {0} bytes", blob.Length) : string.Empty);
+                return string.Format("BLOB {0} bytes", blob.Length);
             }
 
-            return parameter.Value;
+            return value;
+        }
+
+        public static object GetParameterValue(IDataParameter parameter)
+        {
+            return TranslateValue(parameter.Value);
         }
 
         public static TimeSpan LogCommandSeed(this GlimpseDbCommand command)
