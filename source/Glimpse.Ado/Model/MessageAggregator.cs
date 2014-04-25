@@ -70,6 +70,26 @@ namespace Glimpse.Ado.Model
                         command.Parameters.Add(parameterMetadata);
                     }
                 }
+                if (message.BatchParameters != null)
+                {
+                    foreach (var batch in message.BatchParameters)
+                    {
+                        List<CommandParameterMetadata> batchedMeta = new List<CommandParameterMetadata>(batch.Value.Count);
+                        foreach (var parameter in batch.Value)
+                        {
+                            var parameterMetadata = new CommandParameterMetadata
+                            {
+                                Name = parameter.Name,
+                                Value = parameter.Value,
+                                Type = parameter.Type,
+                                Size = parameter.Size
+                            };
+
+                            batchedMeta.Add(parameterMetadata);
+                        }
+                        command.BatchParameters.Add(batchedMeta);
+                    }
+                }
 
                 // Duplicate tracking
                 var dupCount = 0;

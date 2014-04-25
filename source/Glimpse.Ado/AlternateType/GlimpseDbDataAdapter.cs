@@ -144,13 +144,13 @@ namespace Glimpse.Ado.AlternateType
                 var timer = accountCommand.LogCommandSeed();
 
                 IList<CommandExecutedParamater> parameters = null;
+                IList<CommandExecutedBatchParameter> batchParameters = null;
                 if (accountCommand.Parameters.Count > 0)
                 {
-                    parameters = new List<CommandExecutedParamater>();
                     if (dataRows.Length > 0)
                     {
-                        parameters.Add(new CommandExecutedParamater { Name = "#rows", Value = dataRows.Length, Type = DbType.Int32.ToString(), Size = 0 });
-                        Dictionary<string, CommandExecutedParamater> map = new Dictionary<string, CommandExecutedParamater>(parameters.Count);
+                        batchParameters = new List<CommandExecutedBatchParameter>(dataRows.Length);
+                        var templates = new Dictionary<string, CommandExecutedParamater>(accountCommand.Parameters.Count);
                         foreach (IDbDataParameter parameter in accountCommand.Parameters)
                         {
                             var parameterName = parameter.ParameterName;
@@ -159,23 +159,27 @@ namespace Glimpse.Ado.AlternateType
                                 parameterName = "@" + parameterName;
                             }
                             var name = parameter.SourceColumn ?? parameter.ParameterName;
-                            map[name] = new CommandExecutedParamater { Name = parameterName, Value = "?", Type = parameter.DbType.ToString(), Size = parameter.Size };
+                            templates[name] = new CommandExecutedParamater { Name = parameterName, Value = "?", Type = parameter.DbType.ToString(), Size = parameter.Size };
                         }
-                        var names = new List<string>(map.Keys);
+                        var names = new List<string>(templates.Keys);
+
                         for (int i = 0; i < dataRows.Length; i++)
                         {
+                            var paramsOfARow = new List<CommandExecutedParamater>(names.Count);
                             var row = dataRows[i];
                             var deleted = row.RowState == DataRowState.Deleted;
                             foreach (var name in names)
                             {
                                 var val = deleted ? row[name, DataRowVersion.Original] : row[name];
-                                var template = map[name];
-                                parameters.Add(new CommandExecutedParamater { Name = template.Name + "#" + i, Value = Support.TranslateValue(val), Size = template.Size, Type = template.Type });
+                                var template = templates[name];
+                                paramsOfARow.Add(new CommandExecutedParamater { Name = template.Name, Value = Support.TranslateValue(val), Size = template.Size, Type = template.Type });
                             }
+                            batchParameters.Add(new CommandExecutedBatchParameter() { Index = i, Value = paramsOfARow });
                         }
                     }
                     else
                     {
+                        parameters = new List<CommandExecutedParamater>(accountCommand.Parameters.Count);
                         foreach (IDbDataParameter parameter in accountCommand.Parameters)
                         {
                             var parameterName = parameter.ParameterName;
@@ -187,9 +191,14 @@ namespace Glimpse.Ado.AlternateType
                         }
                     }
                 }
-                accountCommand.MessageBroker.Publish(
-                    new CommandExecutedMessage(accountCommand.InnerConnection.ConnectionId, commandId, accountCommand.CommandText, parameters, accountCommand.InnerCommand.Transaction != null, false)
-                    .AsTimedMessage(timer));
+                if (batchParameters != null)
+                    accountCommand.MessageBroker.Publish(
+                        new CommandExecutedMessage(accountCommand.InnerConnection.ConnectionId, commandId, accountCommand.CommandText, batchParameters, accountCommand.InnerCommand.Transaction != null, false)
+                        .AsTimedMessage(timer));
+                else
+                    accountCommand.MessageBroker.Publish(
+                        new CommandExecutedMessage(accountCommand.InnerConnection.ConnectionId, commandId, accountCommand.CommandText, parameters, accountCommand.InnerCommand.Transaction != null, false)
+                        .AsTimedMessage(timer));
 
                 int result = 0;
                 try
