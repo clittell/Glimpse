@@ -150,17 +150,9 @@ namespace Glimpse.Ado.AlternateType
                     if (dataRows.Length > 0)
                     {
                         batchParameters = new List<CommandExecutedBatchParameter>(dataRows.Length);
-                        var templates = new Dictionary<string, CommandExecutedParamater>(accountCommand.Parameters.Count);
-                        foreach (IDbDataParameter parameter in accountCommand.Parameters)
-                        {
-                            var parameterName = parameter.ParameterName;
-                            if (!parameterName.StartsWith("@"))
-                            {
-                                parameterName = "@" + parameterName;
-                            }
-                            var name = parameter.SourceColumn ?? parameter.ParameterName;
-                            templates[name] = new CommandExecutedParamater { Name = parameterName, Value = "?", Type = parameter.DbType.ToString(), Size = parameter.Size };
-                        }
+
+                        var templates = new Dictionary<string, CommandExecutedParamater>();
+                        var paramDefs = Support.ExtractParameters(accountCommand, templates);
                         var names = new List<string>(templates.Keys);
 
                         for (int i = 0; i < dataRows.Length; i++)
@@ -179,16 +171,7 @@ namespace Glimpse.Ado.AlternateType
                     }
                     else
                     {
-                        parameters = new List<CommandExecutedParamater>(accountCommand.Parameters.Count);
-                        foreach (IDbDataParameter parameter in accountCommand.Parameters)
-                        {
-                            var parameterName = parameter.ParameterName;
-                            if (!parameterName.StartsWith("@"))
-                            {
-                                parameterName = "@" + parameterName;
-                            }
-                            parameters.Add(new CommandExecutedParamater { Name = parameterName, Value = Support.GetParameterValue(parameter), Type = parameter.DbType.ToString(), Size = parameter.Size });
-                        }
+                        parameters = Support.ExtractParameters(accountCommand, null);
                     }
                 }
                 if (batchParameters != null)

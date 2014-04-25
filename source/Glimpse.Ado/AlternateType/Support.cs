@@ -98,21 +98,7 @@ namespace Glimpse.Ado.AlternateType
         {
             if (command.MessageBroker != null)
             {
-                IList<CommandExecutedParamater> parameters = null;
-                if (command.Parameters.Count > 0)
-                {
-                    parameters = new List<CommandExecutedParamater>();
-                    foreach (IDbDataParameter parameter in command.Parameters)
-                    {
-                        var parameterName = parameter.ParameterName;
-                        if (!parameterName.StartsWith("@"))
-                        {
-                            parameterName = "@" + parameterName;
-                        }
-
-                        parameters.Add(new CommandExecutedParamater { Name = parameterName, Value = GetParameterValue(parameter), Type = parameter.DbType.ToString(), Size = parameter.Size });
-                    }
-                }
+                IList<CommandExecutedParamater> parameters = Support.ExtractParameters(command, null);
 
                 command.MessageBroker.Publish(
                     new CommandExecutedMessage(command.InnerConnection.ConnectionId, commandId, command.InnerCommand.CommandText, parameters, command.InnerCommand.Transaction != null, isAsync)
@@ -150,6 +136,24 @@ namespace Glimpse.Ado.AlternateType
                     .AsTimedMessage(command.TimerStrategy.Stop(timer))
                     .AsTimelineMessage("Command: Error", AdoTimelineCategory.Command, type));
             }
+        }
+
+        internal static List<CommandExecutedParamater> ExtractParameters(DbCommand command, Dictionary<string, CommandExecutedParamater> parameterToSourceColumn)
+        {
+            var result = new List<CommandExecutedParamater>(command.Parameters.Count);
+            foreach (IDbDataParameter parameter in command.Parameters)
+            {
+                var parameterName = parameter.ParameterName;
+                if (!parameterName.StartsWith("@"))
+                {
+                    parameterName = "@" + parameterName;
+                }
+                var p = new CommandExecutedParamater { Name = parameterName, Value = Support.GetParameterValue(parameter), Type = parameter.DbType.ToString(), Size = parameter.Size };
+                result.Add(p);
+                if (parameterToSourceColumn != null)
+                    parameterToSourceColumn[parameter.SourceColumn ?? parameter.ParameterName] = p;
+            }
+            return result;
         }
     }
 }
