@@ -142,12 +142,12 @@ namespace Glimpse.Ado.Tab
                     else if (command.BatchParameters.Count > 0)
                     {
                         parameters = new List<object[]>(command.BatchParameters.Count + 1);
-                        parameters.Add(new object[] { "Name", "Value", "Type", "#Row" });
+                        parameters.Add(new object[] { "#", "Name", "Value", "Type", "Size" });
                         for(int i = 0; i < command.BatchParameters.Count; i++)
                         {
                             foreach(var parameter in command.BatchParameters[i])
                             {
-                                parameters.Add(new object[] { parameter.Name, parameter.Value, parameter.Type, i });
+                                parameters.Add(new object[] { i, parameter.Name, parameter.Value, parameter.Type, parameter.Size });
                             }
                         }
                     }
