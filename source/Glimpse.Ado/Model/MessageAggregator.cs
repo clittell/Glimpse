@@ -43,7 +43,7 @@ namespace Glimpse.Ado.Model
 
         private void AggregateCommandExecuted()
         {
-            var dupTracker = new Dictionary<DuplicateSql, int>();
+            var dupTracker = new Dictionary<string, int>();
 
             var messages = Messages.OfType<CommandExecutedMessage>();
             foreach (var message in messages)
@@ -93,7 +93,7 @@ namespace Glimpse.Ado.Model
 
                 // Duplicate tracking
                 var dupCount = 0;
-                var dup = new DuplicateSql(message);
+                var dup = message.CommandText;
                 command.IsDuplicate = dupTracker.TryGetValue(dup, out dupCount);
                 dupTracker[dup] = dupCount + 1; 
             }
@@ -243,56 +243,6 @@ namespace Glimpse.Ado.Model
             }
 
             return transaction;
-        }
-
-        class DuplicateSql
-        {
-            public DuplicateSql(CommandExecutedMessage message)
-            {
-                Text = message.CommandText; Parameter = message.Parameters;
-                hash = Text.GetHashCode();
-                if (Parameter != null && Parameter.Count > 0)
-                {
-                    for (int i = 0; i < Parameter.Count; i++)
-                    {
-                        if (Parameter[i].Value != null)
-                            hash ^= Parameter[i].Value.GetHashCode();
-                        else
-                            hash ^= i;
-                    }
-                }
-            }
-
-            public string Text { get; private set; }
-            public IList<CommandExecutedParamater> Parameter { get; private set; }
-
-            public override int GetHashCode()
-            {
-                return hash;
-            }
-            public override bool Equals(object obj)
-            {
-                DuplicateSql other = obj as DuplicateSql;
-                if (other != null)
-                {
-                    if (this.Text.Equals(other.Text))
-                    {
-                        if (Parameter != null && other.Parameter != null && Parameter.Count == other.Parameter.Count)
-                        {
-                            for (int i = 0; i < Parameter.Count; i++)
-                            {
-                                var left = this.Parameter[i].Value ?? System.DBNull.Value;
-                                var right = other.Parameter[i].Value ?? System.DBNull.Value;
-                                if (left.Equals(right) == false)
-                                    return false;
-                            }
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            }
-            private int hash;
-        }
+        }        
     }
 }
