@@ -31,8 +31,8 @@ namespace Glimpse.Mvc.Message
             var viewRenderMessage = message as View.Render.Message;
             if (viewRenderMessage != null)
             {
-                message.EventName = string.Format("Render: {0}.{1}", controllerName, actionName);
                 message.EventSubText = ControllerFullName;
+                message.EventName = string.Format("Render: {0}.{1} : {2}", controllerName, actionName, viewRenderMessage.ViewCorrelation.ViewName);
                 return message;
             }
 
